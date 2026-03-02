@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAKISTAN TV - News Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <style>
+        /* --- 1. FAST SPLASH SCREEN (1s) --- */
+        #splash-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1a1a1a, #000000);
+            z-index: 99999;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            overflow: hidden;
+        }
+        #splash-screen.hide { opacity: 0; transform: scale(1.1); pointer-events: none; }
+        
+        @keyframes glowPulse { 0% { text-shadow: 0 0 20px rgba(220, 53, 69, 0.5); } 100% { text-shadow: 0 0 40px rgba(220, 53, 69, 1), 0 0 60px rgba(220, 53, 69, 0.5); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .splash-logo {
+            font-size: 5rem; font-weight: 900; color: #fff; letter-spacing: 4px;
+            animation: slideUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, glowPulse 1.5s infinite alternate;
+            text-transform: uppercase;
+        }
+        .particle { position: absolute; width: 4px; height: 4px; background: #dc3545; border-radius: 50%; animation: float 10s infinite; opacity: 0.3; }
+        @keyframes float { 0%, 100% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-100px) translateX(50px); } }
+
+        /* --- 2. GLOBAL STYLES --- */
+        :root { --primary: #dc3545; --glass: rgba(30, 30, 30, 0.85); --border: rgba(255, 255, 255, 0.1); }
+        body { background-color: #080808; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+        
+        #app { opacity: 0; transition: opacity 0.5s ease; }
+        #app.visible { opacity: 1; }
+
+        .g-card {
+            background: var(--glass); backdrop-filter: blur(12px);
+            border: 1px solid var(--border); border-radius: 12px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0; transform: translateY(20px); 
+        }
+        .g-card.visible { opacity: 1; transform: translateY(0); }
+        .g-card:hover { transform: translateY(-8px); box-shadow: 0 10px 30px rgba(220, 53, 69, 0.15); }
+
+        .navbar { background: rgba(0,0,0,0.95) !important; border-bottom: 1px solid #222; }
+        .brand-logo { font-weight: 900; font-size: 1.4rem; letter-spacing: 1px; }
+        .brand-logo span { color: var(--primary); }
+
+        .hero-bg { height: 80vh; position: relative; overflow: hidden; background-size: cover; background-position: center; }
+        .hero-bg::after { content: ''; position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(to top, #080808 10%, transparent 100%); }
+        .hero-content { position: relative; z-index: 2; }
+
+        /* Like Button States */
+        .btn-like { color: #fff; border: 1px solid #666; background: transparent; transition: all 0.3s; }
+        .btn-like:hover { border-color: #dc3545; color: #dc3545; }
+        .btn-like.liked { background: #dc3545; border-color: #dc3545; color: #fff; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+
+        .sidebar { background: #111; min-height: 100vh; border-right: 1px solid #222; }
+        .sidebar-link { padding: 12px 20px; display: block; color: #aaa; border-left: 3px solid transparent; transition: 0.2s; }
+        .sidebar-link:hover, .sidebar-link.active { background: rgba(220, 53, 69, 0.1); color: #fff; border-left-color: var(--primary); }
+        .editor-area { min-height: 150px; background: #000; border: 1px solid #333; border-radius: 5px; padding: 15px; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <!-- SPLASH SCREEN (1s Timer) -->
+    <div id="splash-screen">
+        <div class="splash-logo">PAKISTAN TV</div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="app">
+        <!-- NAVBAR -->
+        <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+            <div class="container">
+                <a class="navbar-brand brand-logo" href="#" onclick="nav('home')">PAKISTAN<span>TV</span></a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navMain">
+                    <ul class="navbar-nav ms-auto align-items-center">
+                        <li class="nav-item"><a class="nav-link active" href="#" onclick="goToNews()">News</a></li>
+                        <li class="nav-item ms-2">
+                            <button class="btn btn-outline-danger btn-sm" onclick="checkAuth()" id="authBtn">
+                                <i class="bi bi-person-circle"></i> Admin
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <!-- HOME SECTION -->
+        <section id="sec-home">
+            <div class="hero-bg d-flex align-items-end" id="hero" style="background-image: url('https://source.unsplash.com/1600x900/?news,city');">
+                <div class="container hero-content pb-5">
+                    <span class="badge bg-danger mb-2">Breaking News</span>
+                    <h1 class="display-3 fw-bold text-white mb-3" id="hero-title">Loading Top Story...</h1>
+                    <button class="btn btn-danger px-4" id="hero-btn">Read More</button>
+                </div>
+            </div>
+
+            <div class="container py-5">
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-2">
+                        <input type="text" class="form-control bg-dark border-0 text-light" placeholder="Search..." id="searchInput" onkeyup="liveSearch()">
+                    </div>
+                    <div class="col-md-6 mb-2 text-end" id="catFilters"></div>
+                </div>
+                <h5 class="border-start border-danger ps-3 mb-4 text-uppercase">Latest News</h5>
+                <div class="row" id="postGrid"></div>
+                <div class="text-center mt-4">
+                    <button class="btn btn-outline-secondary" onclick="loadMore()" id="loadMoreBtn">Load More</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SINGLE POST SECTION -->
+        <section id="sec-single" class="py-5" style="display:none;">
+            <div class="container">
+                <div class="row justify-content-center">
+                    <div class="col-lg-8">
+                        <div class="g-card p-4 p-md-5 visible">
+                            <span class="badge bg-danger mb-2" id="single-cat">Category</span>
+                            <h1 class="display-5 mb-3" id="single-title">Title</h1>
+                            <div class="d-flex text-muted mb-4">
+                                <span class="me-3"><i class="bi bi-calendar"></i> <span id="single-date">Date</span></span>
+                                <span><i class="bi bi-eye"></i> <span id="single-views">0</span> Views</span>
+                            </div>
+                            
+                            <!-- Main Image -->
+                            <img id="single-img" src="" class="img-fluid rounded mb-4 w-100">
+                            
+                            <!-- Video Container (Hidden by default) -->
+                            <div class="ratio ratio-16x9 mb-4" id="video-container" style="display:none;">
+                                <iframe id="single-video" src="" allowfullscreen></iframe>
+                            </div>
+
+                            <div id="single-content" class="post-body lh-lg"></div>
+
+                            <!-- Gallery Grid -->
+                            <div class="row g-2 mt-3" id="gallery-grid"></div>
+                            
+                            <!-- Actions -->
+                            <div class="d-flex justify-content-between border-top border-secondary pt-4 mt-4">
+                                <div>
+                                    <button class="btn btn-sm btn-like me-2" id="likeBtn" onclick="likePost()">
+                                        <i class="bi bi-heart"></i> <span id="likeCount">0</span>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-light" onclick="bookmarkPost()"><i class="bi bi-bookmark"></i></button>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-light dropdown-toggle" data-bs-toggle="dropdown">Share</button>
+                                    <ul class="dropdown-menu dropdown-menu-dark">
+                                        <li><a class="dropdown-item" href="#" onclick="shareLink('fb')">Facebook</a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="shareLink('wa')">WhatsApp</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <!-- Comments -->
+                            <div class="mt-5">
+                                <h5>Comments</h5>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control bg-dark border-0 text-light" id="commentInput" placeholder="Write a comment...">
+                                    <button class="btn btn-danger" onclick="addComment()">Post</button>
+                                </div>
+                                <div id="commentList"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ADMIN SECTION -->
+        <section id="sec-admin" style="display:none;">
+            <div class="row g-0">
+                <div class="col-md-2 sidebar">
+                    <div class="p-3 border-bottom border-secondary"><h6 class="text-danger text-uppercase">Admin</h6></div>
+                    <a href="#" class="sidebar-link active" onclick="adminTab('dash')"><i class="bi bi-speedometer2 me-2"></i>Dashboard</a>
+                    <a href="#" class="sidebar-link" onclick="adminTab('posts')"><i class="bi bi-file-text me-2"></i>Posts</a>
+                    <a href="#" class="sidebar-link" onclick="adminTab('add')"><i class="bi bi-plus me-2"></i>Add New</a>
+                    <a href="#" class="sidebar-link" onclick="adminTab('cats')"><i class="bi bi-tags me-2"></i>Categories</a>
+                    <div class="p-3 mt-5"><button class="btn btn-outline-danger btn-sm w-100" onclick="logout()">Logout</button></div>
+                </div>
+                <div class="col-md-10 p-4">
+                    
+                    <!-- Dashboard -->
+                    <div id="admin-dash">
+                        <h3 class="mb-4">Dashboard</h3>
+                        <div class="row g-4">
+                            <div class="col-md-4"><div class="g-card p-3 visible"><small class="text-muted">Total Posts</small><h2 id="stat-posts">0</h2></div></div>
+                            <div class="col-md-4"><div class="g-card p-3 visible"><small class="text-muted">Total Views</small><h2 id="stat-views">0</h2></div></div>
+                        </div>
+                    </div>
+
+                    <!-- Add/Edit Post (Enhanced) -->
+                    <div id="admin-add" style="display:none;">
+                        <input type="hidden" id="editId">
+                        <h3 class="mb-4" id="form-title">Add New Post</h3>
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <div class="mb-3">
+                                    <input type="text" class="form-control bg-dark border-0 text-light" id="pTitle" placeholder="Title">
+                                </div>
+                                <div class="mb-3">
+                                    <div contenteditable="true" class="editor-area" id="pContent" placeholder="Content"></div>
+                                </div>
+                                
+                                <!-- Media Uploads Section -->
+                                <div class="g-card p-3 visible mb-3">
+                                    <h6 class="mb-3">Media</h6>
+                                    <div class="mb-2">
+                                        <label class="small text-muted">YouTube Video URL (Optional)</label>
+                                        <input type="text" class="form-control bg-black text-light border-secondary" id="pVideo" placeholder="https://www.youtube.com/watch?v=...">
+                                    </div>
+                                    <div>
+                                        <label class="small text-muted">Gallery Images (URLs, one per line)</label>
+                                        <textarea class="form-control bg-black text-light border-secondary" id="pGallery" rows="3" placeholder="https://image1.jpg&#10;https://image2.jpg"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="g-card p-3 visible mb-3">
+                                    <h6>Publish</h6>
+                                    <select class="form-select bg-dark border-0 text-light mb-2" id="pStatus">
+                                        <option>published</option>
+                                        <option>draft</option>
+                                    </select>
+                                    <button class="btn btn-danger w-100" onclick="savePost()">Publish</button>
+                                </div>
+                                <div class="g-card p-3 visible mb-3">
+                                    <h6>Category</h6>
+                                    <select class="form-select bg-dark border-0 text-light" id="pCat"></select>
+                                </div>
+                                <div class="g-card p-3 visible">
+                                    <h6>Main Image</h6>
+                                    <input type="file" id="pImg" accept="image/*" onchange="previewImg(event)">
+                                    <img id="imgPrev" class="img-fluid mt-2 rounded" style="display:none;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- List Posts -->
+                    <div id="admin-posts" style="display:none;">
+                        <div class="d-flex justify-content-between mb-4">
+                            <h3>All Posts</h3>
+                            <button class="btn btn-danger" onclick="adminTab('add')">Add New</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-dark table-hover">
+                                <thead><tr><th>Title</th><th>Status</th><th>Action</th></tr></thead>
+                                <tbody id="adminPostTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div id="admin-cats" style="display:none;">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="g-card p-4 visible">
+                                    <input type="text" class="form-control bg-dark border-0 mb-2" id="newCat" placeholder="Category Name">
+                                    <button class="btn btn-danger w-100" onclick="addCat()">Add</button>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <ul class="list-group list-group-flush" id="adminCatList"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <footer class="bg-black py-4 mt-5 text-center text-secondary border-top border-secondary">
+            <small>© 2023 PAKISTAN TV.</small>
+        </footer>
+    </div>
+
+    <!-- LOGIN MODAL -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content bg-dark text-light border-0">
+                <div class="modal-body p-4">
+                    <h5 class="mb-3">Admin Login</h5>
+                    <input type="text" class="form-control bg-black text-light border-secondary mb-2" id="uName" placeholder="Username">
+                    <input type="password" class="form-control bg-black text-light border-secondary mb-3" id="uPass" placeholder="Password">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="remember">
+                        <label class="form-check-label small" for="remember">Remember Me</label>
+                    </div>
+                    <button class="btn btn-danger w-100" onclick="login()">Login</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index:99">
+        <div id="toast" class="toast align-items-center text-white bg-danger border-0">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMsg"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // --- CORE LOGIC ---
+        const DB = {
+            get: k => JSON.parse(localStorage.getItem(`ptv_${k}`)) || null,
+            set: (k, v) => localStorage.setItem(`ptv_${k}`, JSON.stringify(v)),
+            init: () => {
+                if (!DB.get('posts')) {
+                    DB.set('posts', [
+                        {id: 1, title: "Pakistan Launches New Tech Initiative", content: "A massive step forward for the IT sector...", category: "Tech", image: "https://source.unsplash.com/800x600/?technology", date: "2023-10-25", views: 150, likes: 12, likedByUser: false, video: "", gallery: [], status: "published", comments: []},
+                        {id: 2, title: "National Sports Update: Cricket Victory", content: "The national team secures a stunning victory.", category: "Sports", image: "https://source.unsplash.com/800x600/?cricket", date: "2023-10-24", views: 300, likes: 45, likedByUser: false, video: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", gallery: [], status: "published", comments: []}
+                    ]);
+                }
+                if (!DB.get('cats')) DB.set('cats', ['Politics', 'Sports', 'Tech']);
+            }
+        };
+
+        // --- 1. STARTUP (Set to 1 Second) ---
+        window.onload = () => {
+            DB.init();
+            generateParticles();
+            
+            setTimeout(() => {
+                document.getElementById('splash-screen').classList.add('hide');
+                document.getElementById('app').classList.add('visible');
+                initApp();
+                initScrollAnim();
+            }, 1000); // 1 SECOND TIMER
+        };
+
+        function initApp() {
+            renderFrontend();
+            renderCats();
+            checkSession();
+        }
+
+        function generateParticles() {
+            const cont = document.getElementById('splash-screen');
+            for(let i=0; i<20; i++) {
+                let p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.top = Math.random() * 100 + '%';
+                cont.appendChild(p);
+            }
+        }
+
+        function initScrollAnim() {
+            const obs = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if(entry.isIntersecting) entry.target.classList.add('visible');
+                });
+            }, {threshold: 0.1});
+            document.querySelectorAll('.g-card').forEach(el => obs.observe(el));
+        }
+
+        // --- NAVIGATION ---
+        function nav(section) {
+            document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+            document.getElementById('sec-'+section).style.display = 'block';
+            window.scrollTo(0,0);
+            if(section === 'home') renderFrontend();
+        }
+
+        // Fix for News Tab
+        function goToNews() {
+            nav('home');
+            document.getElementById('searchInput').value = '';
+            filterCat('All');
+        }
+
+        // --- FRONTEND ---
+        let currentPostId = 0;
+        
+        function renderFrontend() {
+            const posts = DB.get('posts').filter(p => p.status === 'published');
+            
+            if(posts.length > 0) {
+                const f = posts.find(p => p.featured) || posts[0];
+                document.getElementById('hero').style.backgroundImage = `url('${f.image}')`;
+                document.getElementById('hero-title').innerText = f.title;
+                document.getElementById('hero-btn').onclick = () => viewPost(f.id);
+            }
+
+            postPage = 0;
+            renderGrid(posts);
+        }
+
+        let postPage = 0;
+        function renderGrid(posts) {
+            const perPage = 6;
+            const end = (postPage + 1) * perPage;
+            const list = posts.slice(0, end);
+            
+            document.getElementById('postGrid').innerHTML = list.map(p => `
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="g-card h-100">
+                        <img src="${p.image}" class="w-100" style="height:160px;object-fit:cover;">
+                        <div class="p-3">
+                            <span class="badge bg-secondary">${p.category}</span>
+                            <h5 class="mt-2">${p.title}</h5>
+                            <button class="btn btn-sm btn-outline-danger" onclick="viewPost(${p.id})">Read More</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('loadMoreBtn').style.display = end < posts.length ? 'inline-block' : 'none';
+            setTimeout(initScrollAnim, 100);
+        }
+
+        function loadMore() {
+            postPage++;
+            renderGrid(DB.get('posts').filter(p => p.status === 'published'));
+        }
+
+        function viewPost(id) {
+            const posts = DB.get('posts');
+            const p = posts.find(x => x.id === id);
+            if(!p) return;
+            
+            p.views++;
+            DB.set('posts', posts);
+            currentPostId = id;
+
+            document.getElementById('single-title').innerText = p.title;
+            document.getElementById('single-cat').innerText = p.category;
+            document.getElementById('single-date').innerText = p.date;
+            document.getElementById('single-views').innerText = p.views;
+            document.getElementById('single-img').src = p.image;
+            document.getElementById('single-content').innerHTML = p.content;
+            
+            // Load Video
+            const videoCont = document.getElementById('video-container');
+            const videoFrame = document.getElementById('single-video');
+            if(p.video) {
+                let videoId = p.video.split('v=')[1];
+                if(videoId) {
+                    videoFrame.src = `https://www.youtube.com/embed/${videoId}`;
+                    videoCont.style.display = 'block';
+                }
+            } else {
+                videoCont.style.display = 'none';
+            }
+
+            // Load Gallery
+            const galGrid = document.getElementById('gallery-grid');
+            if(p.gallery && p.gallery.length > 0) {
+                galGrid.innerHTML = p.gallery.map(url => `<div class="col-4"><img src="${url}" class="img-fluid rounded"></div>`).join('');
+            } else {
+                galGrid.innerHTML = '';
+            }
+
+            // Load Likes
+            const likeBtn = document.getElementById('likeBtn');
+            const likeCount = document.getElementById('likeCount');
+            likeCount.innerText = p.likes || 0;
+            
+            // Check if user liked
+            if(p.likedByUser) {
+                likeBtn.classList.add('liked');
+                likeBtn.innerHTML = `<i class="bi bi-heart-fill"></i> ${p.likes}`;
+            } else {
+                likeBtn.classList.remove('liked');
+                likeBtn.innerHTML = `<i class="bi bi-heart"></i> ${p.likes}`;
+            }
+            
+            renderComments(p.comments || []);
+            nav('single');
+        }
+
+        function renderComments(comments) {
+            document.getElementById('commentList').innerHTML = comments.map(c => `
+                <div class="bg-dark p-2 rounded mb-2 small">
+                    <strong class="text-danger">${c.name}:</strong> ${c.text}
+                </div>
+            `).join('');
+        }
+
+        function addComment() {
+            let txt = document.getElementById('commentInput').value;
+            if(!txt) return;
+            let posts = DB.get('posts');
+            let p = posts.find(x => x.id === currentPostId);
+            p.comments = p.comments || [];
+            p.comments.push({name: "Guest", text: txt});
+            DB.set('posts', posts);
+            renderComments(p.comments);
+            document.getElementById('commentInput').value = '';
+            showToast("Comment Added");
+        }
+
+        // --- LIKE LOGIC (Fixed) ---
+        function likePost() {
+            let posts = DB.get('posts');
+            let p = posts.find(x => x.id === currentPostId);
+            const btn = document.getElementById('likeBtn');
+            
+            if(p.likedByUser) {
+                // Already liked -> Unlike
+                p.likes--;
+                p.likedByUser = false;
+                btn.classList.remove('liked');
+                btn.innerHTML = `<i class="bi bi-heart"></i> ${p.likes}`;
+            } else {
+                // Not liked -> Like
+                p.likes++;
+                p.likedByUser = true;
+                btn.classList.add('liked');
+                btn.innerHTML = `<i class="bi bi-heart-fill"></i> ${p.likes}`;
+            }
+            
+            DB.set('posts', posts);
+        }
+
+        function liveSearch() {
+            let q = document.getElementById('searchInput').value.toLowerCase();
+            let res = DB.get('posts').filter(p => p.title.toLowerCase().includes(q));
+            renderGrid(res);
+        }
+
+        function filterCat(cat) {
+            let res = DB.get('posts');
+            if(cat !== 'All') res = res.filter(p => p.category === cat);
+            renderGrid(res);
+        }
+
+        function renderCats() {
+            let cats = DB.get('cats');
+            document.getElementById('catFilters').innerHTML = `
+                <button class="btn btn-sm btn-outline-light me-1" onclick="filterCat('All')">All</button>
+                ${cats.map(c => `<button class="btn btn-sm btn-outline-light me-1" onclick="filterCat('${c}')">${c}</button>`).join('')}
+            `;
+            document.getElementById('pCat').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
+            let catList = document.getElementById('adminCatList');
+            if(catList) catList.innerHTML = cats.map((c, i) => `
+                <li class="list-group-item bg-transparent d-flex justify-content-between">
+                    ${c} <button class="btn btn-sm btn-outline-danger" onclick="delCat(${i})">X</button>
+                </li>
+            `).join('');
+        }
+
+        // --- ADMIN LOGIC ---
+        function checkAuth() {
+            if(localStorage.getItem('ptv_sess')) {
+                nav('admin');
+                adminTab('dash');
+            } else {
+                new bootstrap.Modal(document.getElementById('loginModal')).show();
+            }
+        }
+
+        function login() {
+            let u = document.getElementById('uName').value;
+            let p = document.getElementById('uPass').value;
+            if(u === 'blog' && p === 'blog1') {
+                localStorage.setItem('ptv_sess', '1');
+                bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+                nav('admin');
+                adminTab('dash');
+                showToast("Welcome Admin");
+            } else {
+                alert("Wrong credentials (User: blog, Pass: blog1)");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('ptv_sess');
+            nav('home');
+            location.reload();
+        }
+
+        function checkSession() {
+            if(localStorage.getItem('ptv_sess')) {
+                document.getElementById('authBtn').innerHTML = '<i class="bi bi-gear"></i> Dashboard';
+            }
+        }
+
+        function adminTab(tab) {
+            ['dash', 'add', 'posts', 'cats'].forEach(t => document.getElementById('admin-'+t).style.display = 'none');
+            document.getElementById('admin-'+tab).style.display = 'block';
+            
+            if(tab === 'dash') loadStats();
+            if(tab === 'posts') loadAdminPosts();
+            if(tab === 'add') { document.getElementById('form-title').innerText = "Add New Post"; clearForm(); }
+        }
+
+        function loadStats() {
+            let p = DB.get('posts');
+            document.getElementById('stat-posts').innerText = p.length;
+            document.getElementById('stat-views').innerText = p.reduce((a,b) => a + b.views, 0);
+        }
+
+        function loadAdminPosts() {
+            let p = DB.get('posts');
+            document.getElementById('adminPostTable').innerHTML = p.map(x => `
+                <tr>
+                    <td>${x.title}</td>
+                    <td><span class="badge bg-${x.status=='published'?'success':'warning'}">${x.status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-info" onclick="editPost(${x.id})"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="delPost(${x.id})"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function savePost() {
+            let title = document.getElementById('pTitle').value;
+            if(!title) return alert("Title required");
+            
+            let posts = DB.get('posts');
+            let id = document.getElementById('editId').value || Date.now();
+            
+            // Process Gallery
+            let galleryText = document.getElementById('pGallery').value;
+            let galleryArr = galleryText.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+
+            let data = {
+                id: id,
+                title: title,
+                content: document.getElementById('pContent').innerHTML,
+                category: document.getElementById('pCat').value,
+                status: document.getElementById('pStatus').value,
+                image: document.getElementById('imgPrev').src || 'https://source.unsplash.com/800x600/?news',
+                video: document.getElementById('pVideo').value,
+                gallery: galleryArr,
+                date: new Date().toISOString().split('T')[0],
+                views: 0, likes: 0, likedByUser: false, comments: []
+            };
+
+            if(document.getElementById('editId').value) {
+                let idx = posts.findIndex(x => x.id == id);
+                posts[idx] = data;
+            } else {
+                posts.push(data);
+            }
+
+            DB.set('posts', posts);
+            showToast("Post Saved!");
+            adminTab('posts');
+        }
+
+        function editPost(id) {
+            let p = DB.get('posts').find(x => x.id === id);
+            document.getElementById('editId').value = p.id;
+            document.getElementById('pTitle').value = p.title;
+            document.getElementById('pContent').innerHTML = p.content;
+            document.getElementById('pVideo').value = p.video || '';
+            document.getElementById('pGallery').value = p.gallery ? p.gallery.join('\n') : '';
+            document.getElementById('imgPrev').src = p.image;
+            document.getElementById('imgPrev').style.display = 'block';
+            document.getElementById('form-title').innerText = "Edit Post";
+            adminTab('add');
+        }
+
+        function delPost(id) {
+            if(confirm("Delete this post?")) {
+                let p = DB.get('posts').filter(x => x.id !== id);
+                DB.set('posts', p);
+                loadAdminPosts();
+                showToast("Deleted");
+            }
+        }
+
+        function addCat() {
+            let n = document.getElementById('newCat').value;
+            if(!n) return;
+            let c = DB.get('cats');
+            c.push(n);
+            DB.set('cats', c);
+            renderCats();
+            showToast("Category Added");
+        }
+
+        function delCat(i) {
+            let c = DB.get('cats');
+            c.splice(i, 1);
+            DB.set('cats', c);
+            renderCats();
+        }
+
+        function previewImg(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                document.getElementById('imgPrev').src = ev.target.result;
+                document.getElementById('imgPrev').style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearForm() {
+            document.getElementById('editId').value = '';
+            document.getElementById('pTitle').value = '';
+            document.getElementById('pContent').innerHTML = '';
+            document.getElementById('pVideo').value = '';
+            document.getElementById('pGallery').value = '';
+            document.getElementById('imgPrev').style.display = 'none';
+        }
+
+        function showToast(msg) {
+            document.getElementById('toastMsg').innerText = msg;
+            new bootstrap.Toast(document.getElementById('toast')).show();
+        }
+        
+        function shareLink(type) {
+            const url = window.location.href;
+            if(type === 'wa') window.open(`https://wa.me/?text=${url}`);
+            if(type === 'fb') window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
+        }
+    </script>
+</body>
+</html>
